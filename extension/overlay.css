@@ -1,0 +1,47 @@
+#everos-gemini-badge {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2147483647;
+  min-width: 220px;
+  max-width: 320px;
+  padding: 12px 14px;
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  border-radius: 14px;
+  background: rgba(10, 15, 20, 0.92);
+  color: #f5f7fa;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(14px);
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+#everos-gemini-badge .everos-label {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(209, 213, 219, 0.8);
+  margin-bottom: 4px;
+}
+
+#everos-gemini-badge .everos-metric {
+  font-size: 18px;
+  font-weight: 700;
+  color: #34d399;
+}
+
+#everos-gemini-badge .everos-subtext {
+  margin-top: 4px;
+  color: rgba(229, 231, 235, 0.86);
+  word-break: break-word;
+}
+
+#everos-gemini-badge.everos-loading {
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+#everos-gemini-badge.everos-error {
+  border-color: rgba(248, 113, 113, 0.35);
+}
