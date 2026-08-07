@@ -87,12 +87,13 @@ def calculate_costs(prompt: str, memory_context: str, tier: str, routed_model: s
 
     # Illustrative inference-energy assumptions until measured model telemetry is available.
     energy_wh_per_1k_tokens = {
-        "gemini-2.5-flash": 0.3,
-        "gemini-2.5-pro": 1.2,
+        "gemini-3.5-flash-lite": 0.3,
+        "gemini-3.6-flash": 0.6,
+        "gemini-3.1-pro": 1.2,
     }
     grid_carbon_g_per_kwh = 400.0
-    baseline_energy_wh = (baseline_tokens / 1000) * energy_wh_per_1k_tokens[baseline_model]
-    actual_energy_wh = (actual_tokens / 1000) * energy_wh_per_1k_tokens.get(routed_model, energy_wh_per_1k_tokens[baseline_model])
+    baseline_energy_wh = (baseline_tokens / 1000) * energy_wh_per_1k_tokens[BASELINE_MODEL]
+    actual_energy_wh = (actual_tokens / 1000) * energy_wh_per_1k_tokens.get(routed_model, energy_wh_per_1k_tokens[BASELINE_MODEL])
     energy_saved_wh = max(0.0, baseline_energy_wh - actual_energy_wh)
     estimated_co2_saved_g = (energy_saved_wh / 1000) * grid_carbon_g_per_kwh
 
