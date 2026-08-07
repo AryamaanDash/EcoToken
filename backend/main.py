@@ -46,14 +46,25 @@ class OptimizeGeminiResponse(BaseModel):
     estimated_co2_saved_g: float
 
 
-# --- per-token rates. Baseline is always the top model. EDIT to real prices. -
+# Configured per-token rates used for estimates. Baseline is always the top model.
 MODEL_RATES = {
     "gemini-3.5-flash-lite": 0.000002,
     "gemini-3.6-flash": 0.000005,
     "gemini-3.1-pro": 0.000015,
 }
-BASELINE_MODEL = MODEL_MAP["heavy"]           # what you'd pay if you always used Pro
-TIER_OVERHEAD = {"light": 60, "mid": 90, "heavy": 120}   # est. output tokens per tier
+BASELINE_MODEL = MODEL_MAP["heavy"]
+ESTIMATED_OUTPUT_TOKENS = 250
+
+# User-supplied operational benchmarks for estimated inference energy.
+# Values are kWh consumed per one million processed tokens. Pro is the
+# comparison baseline because it is the model EcoToken avoids when a lighter
+# tier can handle the request.
+ENERGY_KWH_PER_MILLION_TOKENS = {
+    "gemini-3.5-flash-lite": 0.01,
+    "gemini-3.6-flash": 0.05,
+    "gemini-3.1-pro": 0.40,
+}
+GRID_CARBON_G_PER_KWH = 400.0
 
 
 def retrieve_memory_context(prompt: str) -> str:
@@ -76,28 +87,26 @@ def estimate_tokens(text: str) -> int:
 
 def calculate_costs(prompt: str, memory_context: str, tier: str, routed_model: str) -> dict[str, Any]:
     prompt_tokens = estimate_tokens(prompt)
-    memory_tokens = estimate_tokens(memory_context)
-    baseline_tokens = prompt_tokens + 250
-    actual_tokens = prompt_tokens + memory_tokens + TIER_OVERHEAD.get(tier, 120)
+    # Gemini's website does not expose request usage metadata to the extension.
+    # Use the same estimated token volume for both models so the comparison
+    # measures only the effect of routing, not an invented response-length change.
+    estimated_tokens = prompt_tokens + ESTIMATED_OUTPUT_TOKENS
 
     baseline_rate = MODEL_RATES[BASELINE_MODEL]
     actual_rate = MODEL_RATES.get(routed_model, baseline_rate)
 
-    baseline_cost = baseline_tokens * baseline_rate
-    actual_cost = actual_tokens * actual_rate
+    baseline_cost = estimated_tokens * baseline_rate
+    actual_cost = estimated_tokens * actual_rate
     pct_saved = 0.0 if baseline_cost <= 0 else max(0.0, min(100.0, ((baseline_cost - actual_cost) / baseline_cost) * 100.0))
 
-    # Illustrative inference-energy assumptions until measured model telemetry is available.
-    energy_wh_per_1k_tokens = {
-        "gemini-3.5-flash-lite": 0.15,
-        "gemini-3.6-flash": 0.3,
-        "gemini-3.1-pro": 1.2,
-    }
-    grid_carbon_g_per_kwh = 400.0
-    baseline_energy_wh = (baseline_tokens / 1000) * energy_wh_per_1k_tokens[BASELINE_MODEL]
-    actual_energy_wh = (actual_tokens / 1000) * energy_wh_per_1k_tokens.get(routed_model, energy_wh_per_1k_tokens[BASELINE_MODEL])
-    energy_saved_wh = max(0.0, baseline_energy_wh - actual_energy_wh)
-    estimated_co2_saved_g = (energy_saved_wh / 1000) * grid_carbon_g_per_kwh
+    token_volume_millions = estimated_tokens / 1_000_000
+    baseline_energy_kwh = token_volume_millions * ENERGY_KWH_PER_MILLION_TOKENS[BASELINE_MODEL]
+    actual_energy_kwh = token_volume_millions * ENERGY_KWH_PER_MILLION_TOKENS.get(
+        routed_model,
+        ENERGY_KWH_PER_MILLION_TOKENS[BASELINE_MODEL],
+    )
+    energy_saved_kwh = max(0.0, baseline_energy_kwh - actual_energy_kwh)
+    estimated_co2_saved_g = energy_saved_kwh * GRID_CARBON_G_PER_KWH
 
     return {
         "model_used": routed_model,

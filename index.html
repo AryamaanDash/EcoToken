@@ -5,18 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="EcoToken intelligence savings dashboard for smarter Gemini model routing."
+      content="Local EcoToken routing activity and modeled savings trends."
     />
     <meta name="theme-color" content="#eaf8f4" />
-    <title>EcoToken — Intelligence savings</title>
+    <title>EcoToken — Routing analytics</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <a class="skip-link" href="#main-content">Skip to dashboard</a>
+    <a class="skip-link" href="#main-content">Skip to analytics</a>
 
     <header class="site-header">
       <div class="header-inner">
-        <a class="brand" href="./" aria-label="EcoToken dashboard home">
+        <a class="brand" href="./" aria-label="EcoToken analytics home">
           <span class="brand-mark" aria-hidden="true">
             <svg viewBox="0 0 36 36">
               <path d="M18 5.25v8.1" />
@@ -30,225 +30,215 @@
           <span>EcoToken</span>
         </a>
 
-        <div class="status-pill" role="status">
+        <div class="storage-status" role="status">
           <span class="status-dot" aria-hidden="true"></span>
-          Classifier active
+          <span id="storage-status-text">Reading local data…</span>
         </div>
       </div>
 
       <div class="hero-inner">
-        <div class="eyebrow">Gemini model routing</div>
-        <div class="hero-row">
-          <div>
-            <h1>Intelligence savings</h1>
-            <p>Less compute for the same thoughtful answers.</p>
-          </div>
-          <div class="period" aria-label="Reporting period">
-            <span>Jul 9 – Aug 7, 2026</span>
-            <strong>30 days</strong>
-          </div>
+        <div>
+          <p class="eyebrow">Gemini model routing</p>
+          <h1>Routing analytics</h1>
+          <p class="hero-copy">Measured locally. Estimates are labeled clearly.</p>
+        </div>
+
+        <div class="period-control" aria-label="Analytics period">
+          <button type="button" data-period="7" aria-pressed="true">Week</button>
+          <button type="button" data-period="30" aria-pressed="false">Month</button>
+          <button type="button" data-period="365" aria-pressed="false">Year</button>
         </div>
       </div>
-
-      <nav class="dashboard-nav" aria-label="Dashboard sections">
-        <div class="nav-inner">
-          <a class="nav-link active" href="#overview" aria-current="page">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M4 19V9m5 10V5m6 14v-7m5 7V3" />
-            </svg>
-            Overview
-          </a>
-          <a class="nav-link" href="#impact">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 21c4.4-2.2 7-5.8 7-10.5V5l-7-2-7 2v5.5C5 15.2 7.6 18.8 12 21Z" />
-              <path d="m8.5 12 2.2 2.2 4.8-5" />
-            </svg>
-            Impact
-          </a>
-          <a class="nav-link" href="#methodology">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M7 3h10v4H7zM5 7h14v14H5z" />
-              <path d="M9 12h6M9 16h4" />
-            </svg>
-            Methodology
-          </a>
-        </div>
-      </nav>
     </header>
 
     <main id="main-content">
-      <section class="metrics-section" id="overview" aria-labelledby="overview-title">
+      <div class="range-row">
+        <div>
+          <p class="section-kicker">Selected period</p>
+          <h2 id="range-title">Last 7 days</h2>
+        </div>
+        <p id="date-range">—</p>
+      </div>
+
+      <section class="all-time-summary" aria-labelledby="all-time-title">
+        <div class="all-time-heading">
+          <div>
+            <p class="section-kicker">Same totals as the popup</p>
+            <h2 id="all-time-title">All-time summary</h2>
+          </div>
+          <span class="data-type estimated">Local totals</span>
+        </div>
+
+        <div class="all-time-metrics">
+          <div>
+            <span>Routed prompts</span>
+            <strong id="all-time-prompts">0</strong>
+          </div>
+          <div>
+            <span>Est. inference cost saved</span>
+            <strong id="all-time-cost">$0.000000</strong>
+          </div>
+          <div>
+            <span>Est. CO₂ saved</span>
+            <strong id="all-time-co2">0.000 g</strong>
+          </div>
+        </div>
+      </section>
+
+      <div id="data-notice" class="data-notice" role="status" hidden>
+        <span class="notice-icon" aria-hidden="true">!</span>
+        <div>
+          <strong id="data-notice-title">Timeline tracking needs a refresh</strong>
+          <p id="data-notice-copy"></p>
+        </div>
+      </div>
+
+      <section class="measured-section" aria-labelledby="measured-title">
         <div class="section-heading">
           <div>
-            <p class="section-kicker">This period</p>
-            <h2 id="overview-title">Smarter routing, measured</h2>
+            <p class="section-kicker">Observed in this browser</p>
+            <h2 id="measured-title">Measured routing activity</h2>
           </div>
-          <span class="sample-label">Illustrative data</span>
+          <span class="data-type measured">Measured</span>
         </div>
 
         <div class="metrics-grid">
           <article class="metric metric-featured">
-            <div class="metric-topline">
-              <span class="metric-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M5 18V9m7 9V5m7 13v-6" />
-                </svg>
-              </span>
-              <span class="change-badge">↓ optimized</span>
-            </div>
-            <p class="metric-label">Inference cost saved</p>
-            <p class="metric-value">71.4<span>%</span></p>
-            <p class="metric-note">Compared with always using the highest-capability model</p>
+            <span class="metric-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M5 18V9m7 9V5m7 13v-6" /></svg>
+            </span>
+            <p>Routed prompts</p>
+            <strong id="prompt-total">0</strong>
+            <small>Completed routing decisions</small>
           </article>
 
           <article class="metric">
-            <div class="metric-topline">
-              <span class="metric-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M13 2 5.8 13H12l-1 9 7.2-11H12l1-9Z" />
-                </svg>
-              </span>
-            </div>
-            <p class="metric-label">Inference energy saved</p>
-            <p class="metric-value">63.8<span>%</span></p>
-            <p class="metric-note">Compute avoided through prompt-aware model selection</p>
+            <span class="tier-dot lite" aria-hidden="true"></span>
+            <p>Flash-Lite routes</p>
+            <strong id="light-total">0</strong>
+            <small>Light-complexity prompts</small>
           </article>
 
           <article class="metric">
-            <div class="metric-topline">
-              <span class="metric-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M13.5 2.5c.8 3.5-.6 5-2.4 6.6-1.5 1.4-2.9 2.7-2.6 5.3.1 1 .6 1.9 1.3 2.6-2.4-.6-4.3-2.8-4.3-5.5C5.5 7 9.2 4 13.5 2.5Z" />
-                  <path d="M14.4 10.1c2.6 1.7 4.1 3.8 4.1 6.1 0 3-2.5 5.3-5.5 5.3-2 0-3.8-1.1-4.7-2.8 3.7.2 6.4-2.8 6.1-8.6Z" />
-                </svg>
-              </span>
-            </div>
-            <p class="metric-label">Energy avoided</p>
-            <p class="metric-value">428<span>Wh</span></p>
-            <p class="metric-note">Equivalent inference energy not consumed this period</p>
+            <span class="tier-dot flash" aria-hidden="true"></span>
+            <p>Flash routes</p>
+            <strong id="mid-total">0</strong>
+            <small>Mid-complexity prompts</small>
           </article>
 
           <article class="metric">
-            <div class="metric-topline">
-              <span class="metric-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M19.5 4.5C13 4.5 7.5 7 5 12c-1.5 3-.5 6.3 2 8 4.5-1.5 7.5-4.5 9-9" />
-                  <path d="M5.5 19.5c2-4 5.2-6.8 9.5-8.5" />
-                </svg>
-              </span>
-            </div>
-            <p class="metric-label">Estimated CO₂ avoided</p>
-            <p class="metric-value">288<span>g</span></p>
-            <p class="metric-note">Estimated emissions associated with the avoided energy</p>
+            <span class="tier-dot pro" aria-hidden="true"></span>
+            <p>Pro routes</p>
+            <strong id="heavy-total">0</strong>
+            <small>Heavy-complexity prompts</small>
           </article>
         </div>
       </section>
 
-      <section class="impact-layout" id="impact" aria-labelledby="impact-title">
-        <article class="chart-card">
-          <div class="card-header">
-            <div>
-              <p class="section-kicker">Daily impact</p>
-              <h2 id="impact-title">Energy avoided over time</h2>
+      <section class="estimates-section" aria-labelledby="estimates-title">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">Modeled from routing activity</p>
+            <h2 id="estimates-title">Estimated savings</h2>
+          </div>
+          <span class="data-type estimated">Estimated</span>
+        </div>
+
+        <div class="charts-grid">
+          <article class="chart-card cost-chart-card">
+            <div class="chart-header">
+              <div>
+                <p>Estimated inference cost avoided</p>
+                <strong id="period-cost">$0.000000</strong>
+              </div>
+              <span id="cost-period-label">7-day total</span>
             </div>
-            <div class="chart-summary">
-              <strong>428 Wh</strong>
-              <span>30-day total</span>
+
+            <div id="cost-chart-description" class="chart-legend">
+              <span><i class="legend-swatch cost" aria-hidden="true"></i><span id="cost-granularity">Daily estimate</span></span>
+              <span>USD saved vs. Pro baseline</span>
             </div>
-          </div>
 
-          <div class="chart-wrap" id="energy-chart">
-            <svg
-              class="chart"
-              viewBox="0 0 920 320"
-              role="img"
-              aria-labelledby="chart-title chart-description"
-              preserveAspectRatio="none"
-            >
-              <title id="chart-title">Daily energy avoided over 30 days</title>
-              <desc id="chart-description">
-                An area chart showing an illustrative total of 428 watt-hours of energy avoided.
-              </desc>
-              <g class="chart-grid" aria-hidden="true"></g>
-              <path class="chart-area" aria-hidden="true"></path>
-              <path class="chart-line" aria-hidden="true"></path>
-              <g class="chart-points" aria-hidden="true"></g>
-              <g class="chart-labels" aria-hidden="true"></g>
-            </svg>
-            <div class="chart-tooltip" role="status" aria-live="polite"></div>
-          </div>
-
-          <div class="chart-footer">
-            <span><i class="legend-swatch" aria-hidden="true"></i>Energy avoided</span>
-            <span>Updated just now</span>
-          </div>
-        </article>
-
-        <aside class="projection-card" aria-labelledby="projection-title">
-          <div class="projection-mark" aria-hidden="true">
-            <svg viewBox="0 0 32 32">
-              <path d="M8 23.5V13m8 10.5V7m8 16.5v-6" />
-              <path d="m6 9 6-4 5 3 8-5" />
-            </svg>
-          </div>
-          <p class="section-kicker">Projected at scale</p>
-          <h2 id="projection-title">At 1M requests <span>per day</span></h2>
-
-          <dl class="projection-list">
-            <div>
-              <dt>Energy avoided</dt>
-              <dd>4,280 <span>kWh/day</span></dd>
+            <div class="chart-frame" data-chart="cost">
+              <svg
+                id="cost-chart"
+                class="chart"
+                viewBox="0 0 760 280"
+                role="img"
+                aria-label="Estimated inference cost avoided over the selected period"
+                aria-describedby="cost-chart-description"
+                preserveAspectRatio="none"
+              ></svg>
+              <div class="chart-empty">No routing data in this period</div>
+              <div class="chart-tooltip" role="status" aria-live="polite"></div>
             </div>
-            <div>
-              <dt>CO₂ avoided</dt>
-              <dd>2.88 <span>metric tons/day</span></dd>
-            </div>
-          </dl>
+          </article>
 
-          <div class="projection-note">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 8v5m0-8h.01" />
-            </svg>
-            <p>Projection applies the sample period’s routing behavior to one million daily requests.</p>
-          </div>
-        </aside>
+          <article class="chart-card environment-chart-card">
+            <div class="chart-header">
+              <div>
+                <p>Estimated CO₂ avoided</p>
+                <strong id="period-co2">0.000 g</strong>
+              </div>
+              <span id="co2-period-label">7-day total</span>
+            </div>
+
+            <div id="co2-chart-description" class="chart-legend">
+              <span><i class="legend-swatch co2" aria-hidden="true"></i><span id="co2-granularity">Daily estimate</span></span>
+              <span>Grams CO₂ avoided vs. Pro baseline</span>
+            </div>
+
+            <div class="chart-frame" data-chart="co2">
+              <svg
+                id="co2-chart"
+                class="chart"
+                viewBox="0 0 760 280"
+                role="img"
+                aria-label="Estimated carbon dioxide avoided over the selected period"
+                aria-describedby="co2-chart-description"
+                preserveAspectRatio="none"
+              ></svg>
+              <div class="chart-empty">No routing data in this period</div>
+              <div class="chart-tooltip" role="status" aria-live="polite"></div>
+            </div>
+          </article>
+        </div>
       </section>
 
-      <section class="methodology" id="methodology" aria-labelledby="methodology-title">
+      <section class="methodology" aria-labelledby="methodology-title">
         <div>
-          <p class="section-kicker">How it works</p>
-          <h2 id="methodology-title">The right model for every prompt</h2>
+          <p class="section-kicker">Data quality</p>
+          <h2 id="methodology-title">What these numbers mean</h2>
         </div>
-        <div class="method-steps">
-          <div class="method-step">
-            <span>01</span>
-            <div>
-              <h3>Classify locally</h3>
-              <p>The prompt is evaluated on-device without adding a network round trip.</p>
-            </div>
-          </div>
-          <div class="method-step">
-            <span>02</span>
-            <div>
-              <h3>Route intelligently</h3>
-              <p>Simple prompts use a lighter model; complex prompts retain deeper reasoning.</p>
-            </div>
-          </div>
-          <div class="method-step">
-            <span>03</span>
-            <div>
-              <h3>Measure impact</h3>
-              <p>Estimated cost, energy, and carbon savings accumulate in this dashboard.</p>
-            </div>
-          </div>
+
+        <div class="methodology-grid">
+          <article>
+            <span class="method-number">01</span>
+            <h3>Routing is measured</h3>
+            <p>Prompt counts and selected tiers are recorded after the local router returns a decision.</p>
+          </article>
+          <article>
+            <span class="method-number">02</span>
+            <h3>Cost is estimated</h3>
+            <p>Cost avoided uses configured per-token model rates and the same estimated token volume for both models.</p>
+          </article>
+          <article>
+            <span class="method-number">03</span>
+            <h3>Carbon is estimated</h3>
+            <p>CO₂ avoided uses 0.01, 0.05, and 0.40 kWh per million tokens for Lite, Flash, and Pro, with a 400 g CO₂e/kWh grid factor.</p>
+          </article>
         </div>
+
+        <p class="methodology-note">
+          Gemini’s website does not expose billing usage or energy-meter data to this extension. Cost and carbon values are modeled estimates using the stated benchmarks—not an invoice, meter reading, or verified emissions claim.
+        </p>
       </section>
     </main>
 
     <footer>
       <div class="footer-inner">
         <span>EcoToken</span>
-        <p>Example analytics for demonstration purposes.</p>
+        <p>Aggregated locally. Prompt text is not stored in analytics.</p>
       </div>
     </footer>
 

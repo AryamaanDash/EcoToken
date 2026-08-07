@@ -5,50 +5,95 @@
   const ANALYTICS_KEY = "ecotokenAnalytics";
   const PREPEND_MEMORY_CONTEXT = false;
 
+  const MODEL_TIER_SYNONYMS = {
+    lite: ["3.5 flash-lite", "flash-lite"],
+    flash: ["3.6 flash", "flash"],
+    pro: ["3.1 pro", "pro", "thinking"]
+  };
+
+  const MODEL_TIER_TO_EXACT_MODEL = {
+    lite: "3.5 Flash-Lite",
+    flash: "3.6 Flash",
+    pro: "3.1 Pro"
+  };
+
+  const MODEL_TIER_BY_MODEL = {
+    "llama3-8b": "lite",
+    "llama3-70b": "pro",
+    "claude-3-5-sonnet": "pro",
+    "gemini-3.5-flash-lite": "lite",
+    "gemini-3.6-flash": "flash",
+    "gemini-3.1-pro": "pro",
+    "3.5 flash-lite": "lite",
+    "3.6 flash": "flash",
+    "3.1 pro": "pro",
+    "gemini-2.5-flash": "flash",
+    "gemini-2.5-pro": "pro"
+  };
+
   let lastPrompt = "";
   let activeRequestId = 0;
+  let bypassInterception = false;
+  let submissionInFlight = false;
+  let cachedModelPickerButton = null;
+  let modelPickerObserver = null;
   let isEnabled = false;
 
   function normalizeModelName(modelName) {
     return (modelName || "").toLowerCase().replace(/[^a-z0-9.-]/g, "");
   }
 
-  function findModelSwitcher() {
-    const selectors = [
-      'button[aria-label*="model"]',
-      'button[title*="model"]',
-      '[role="menuitem"]',
-      '[role="option"]'
-    ];
-
-    for (const selector of selectors) {
-      const element = document.querySelector(selector);
-      if (element instanceof HTMLElement) {
-        return element;
-      }
-    }
-
-    return null;
-  }
-
-  function applyGeminiModelSelection(recommendedModel) {
-    const switcher = findModelSwitcher();
-    if (!switcher) {
+  function isElementVisible(element) {
+    if (!(element instanceof HTMLElement)) {
       return false;
     }
 
-    const normalized = normalizeModelName(recommendedModel);
-    const label = [switcher.getAttribute("aria-label"), switcher.getAttribute("title"), switcher.textContent]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
+    const style = window.getComputedStyle(element);
+    return style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0" && element.offsetParent !== null;
+  }
 
-    if (label.includes(normalized) || label.includes("gemini")) {
-      switcher.click();
-      return true;
+  function getTextLabel(element) {
+    if (!(element instanceof HTMLElement)) {
+      return "";
     }
 
-    return false;
+    return [element.getAttribute("aria-label"), element.getAttribute("title"), element.textContent]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+      .trim();
+  }
+
+  function getTierKeywords(targetTier) {
+    return MODEL_TIER_SYNONYMS[targetTier] || MODEL_TIER_SYNONYMS.lite;
+  }
+
+  function getExactModelLabel(targetTier) {
+    return MODEL_TIER_TO_EXACT_MODEL[targetTier] || MODEL_TIER_TO_EXACT_MODEL.lite;
+  }
+
+  function resolveTargetTier(modelUsed, prompt) {
+    const normalizedModel = normalizeModelName(modelUsed);
+    if (normalizedModel in MODEL_TIER_BY_MODEL) {
+      return MODEL_TIER_BY_MODEL[normalizedModel];
+    }
+
+    const promptWordCount = (prompt || "").trim().split(/\s+/).filter(Boolean).length;
+    if (promptWordCount < 15) {
+      return "lite";
+    }
+
+    if (promptWordCount <= 50) {
+      return "flash";
+    }
+
+    return "pro";
+  }
+
+  function matchesRequestedModel(label, targetTier) {
+    const exactLabel = getExactModelLabel(targetTier).toLowerCase();
+    const keywords = getTierKeywords(targetTier);
+    return label === exactLabel || label.includes(exactLabel) || keywords.some((keyword) => label.includes(keyword));
   }
 
   function ensureBadge() {
@@ -99,6 +144,7 @@
     if (!input) {
       return "";
     }
+
     return (input.innerText || input.textContent || "").trim();
   }
 
@@ -106,6 +152,7 @@
     if (!input) {
       return;
     }
+
     input.focus();
     input.textContent = value;
     input.dispatchEvent(new InputEvent("input", { bubbles: true, cancelable: true, composed: true }));
@@ -120,13 +167,246 @@
     setPromptText(input, combined);
   }
 
+  function wait(ms) {
+    return new Promise((resolve) => window.setTimeout(resolve, ms));
+  }
+
+  function waitForElement(predicate, timeoutMs = 2500) {
+    return new Promise((resolve) => {
+      const immediate = predicate();
+      if (immediate) {
+        resolve(immediate);
+        return;
+      }
+
+      let observer;
+      const timerId = window.setTimeout(() => {
+        if (observer) {
+          observer.disconnect();
+        }
+        resolve(null);
+      }, timeoutMs);
+
+      observer = new MutationObserver(() => {
+        const found = predicate();
+        if (found) {
+          observer.disconnect();
+          window.clearTimeout(timerId);
+          resolve(found);
+        }
+      });
+
+      observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true });
+    });
+  }
+
+  function findModelSwitcher() {
+    const selectors = [
+      ".model-picker-container button",
+      'button[aria-haspopup="menu"]',
+      'button[data-test-id="model-selector"]',
+      'button[aria-label*="model"]',
+      'button[title*="model"]',
+      'button[aria-label*="gemini"]',
+      'button[title*="gemini"]'
+    ];
+
+    for (const selector of selectors) {
+      const elements = Array.from(document.querySelectorAll(selector));
+      for (const element of elements) {
+        if (element instanceof HTMLElement && isElementVisible(element)) {
+          return element;
+        }
+      }
+    }
+
+    const fallbackButtons = Array.from(document.querySelectorAll('button, [role="button"]'));
+    for (const element of fallbackButtons) {
+      if (!(element instanceof HTMLElement) || !isElementVisible(element)) {
+        continue;
+      }
+
+      const label = getTextLabel(element);
+      if (label.includes("model") || label.includes("gemini") || label.includes("flash") || label.includes("pro") || label.includes("thinking")) {
+        return element;
+      }
+    }
+
+    return null;
+  }
+
+  function isCurrentSelection(button, targetTier) {
+    const label = getTextLabel(button);
+    return matchesRequestedModel(label, targetTier);
+  }
+
+  function findOpenMenuRoot() {
+    const candidates = Array.from(document.querySelectorAll('[role="menu"], [role="listbox"], .mat-mdc-menu-panel, .cdk-overlay-pane'));
+    return candidates.reverse().find((element) => element instanceof HTMLElement && isElementVisible(element)) || null;
+  }
+
+  function findMenuOption(targetTier) {
+    const exactLabel = getExactModelLabel(targetTier).toLowerCase();
+    const keywords = getTierKeywords(targetTier);
+    const scopeRoots = [findOpenMenuRoot(), document.body].filter(Boolean);
+    const selectors = ['[role="menuitem"]', '[role="option"]', '.mat-mdc-menu-item', 'button'];
+
+    for (const root of scopeRoots) {
+      for (const selector of selectors) {
+        const candidates = Array.from(root.querySelectorAll(selector));
+        for (const element of candidates) {
+          if (!(element instanceof HTMLElement) || !isElementVisible(element)) {
+            continue;
+          }
+
+          const label = getTextLabel(element);
+          if (label === exactLabel || label.includes(exactLabel) || keywords.some((keyword) => label.includes(keyword))) {
+            return element;
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
+  function closeMenuSafely() {
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Escape",
+        code: "Escape",
+        bubbles: true,
+        cancelable: true
+      })
+    );
+  }
+
+  async function selectGeminiModel(targetTier) {
+    const resolvedTier = ["lite", "flash", "pro"].includes(targetTier) ? targetTier : "lite";
+    const exactLabel = getExactModelLabel(resolvedTier);
+    const switcher = cachedModelPickerButton && isElementVisible(cachedModelPickerButton) ? cachedModelPickerButton : await waitForElement(findModelSwitcher);
+
+    if (!switcher) {
+      console.warn("[EcoToken] Model picker button not found.");
+      return false;
+    }
+
+    cachedModelPickerButton = switcher;
+
+    if (isCurrentSelection(switcher, resolvedTier)) {
+      console.log(`[EcoToken] Gemini already set to ${exactLabel}.`);
+      return true;
+    }
+
+    switcher.click();
+    await wait(100);
+
+    const option = await waitForElement(() => findMenuOption(resolvedTier), 2500);
+    if (!option) {
+      closeMenuSafely();
+      console.warn(`[EcoToken] No matching model option found for ${exactLabel}.`);
+      return false;
+    }
+
+    option.click();
+    await wait(150);
+
+    const refreshedButton = findModelSwitcher();
+    if (refreshedButton) {
+      cachedModelPickerButton = refreshedButton;
+    }
+
+    console.log(`[EcoToken] Selected Gemini model ${exactLabel}.`);
+    return true;
+  }
+
+  function isSendButton(element) {
+    if (!(element instanceof HTMLElement)) {
+      return false;
+    }
+
+    const ariaLabel = (element.getAttribute("aria-label") || "").toLowerCase();
+    const title = (element.getAttribute("title") || "").toLowerCase();
+    const tooltip = (element.getAttribute("data-tooltip") || "").toLowerCase();
+    const text = (element.textContent || "").toLowerCase();
+    return ariaLabel.includes("send") || title.includes("send") || tooltip.includes("send") || text === "send";
+  }
+
+  function getSendButton() {
+    const buttons = Array.from(document.querySelectorAll('button, [role="button"]'));
+    return buttons.find((button) => button instanceof HTMLElement && isSendButton(button)) || null;
+  }
+
+  function triggerNativeSend() {
+    const sendButton = getSendButton();
+    if (sendButton) {
+      bypassInterception = true;
+      sendButton.click();
+      window.setTimeout(() => {
+        bypassInterception = false;
+      }, 0);
+      return true;
+    }
+
+    const input = getPromptInput();
+    if (!input) {
+      return false;
+    }
+
+    bypassInterception = true;
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Enter",
+        code: "Enter",
+        bubbles: true,
+        cancelable: true
+      })
+    );
+    window.setTimeout(() => {
+      bypassInterception = false;
+    }, 0);
+    return true;
+  }
+
+  function observeModelPicker() {
+    if (modelPickerObserver) {
+      return;
+    }
+
+    const target = document.querySelector(".model-picker-container") || document.body;
+    if (!target) {
+      return;
+    }
+
+    let scheduled = false;
+    const refresh = () => {
+      scheduled = false;
+      const button = findModelSwitcher();
+      if (button) {
+        cachedModelPickerButton = button;
+      }
+    };
+
+    modelPickerObserver = new MutationObserver(() => {
+      if (scheduled) {
+        return;
+      }
+
+      scheduled = true;
+      window.requestAnimationFrame(refresh);
+    });
+
+    modelPickerObserver.observe(target, { childList: true, subtree: true, attributes: true });
+    refresh();
+  }
+
   async function postPrompt(prompt) {
     if (!isEnabled) {
       return;
     }
 
     const requestId = ++activeRequestId;
-    setBadgeState({ metric: "Analyzing", subtext: "Sending prompt to local optimizer...", loading: true });
+    setBadgeState({ metric: "Selecting", subtext: "Choosing Gemini model before send...", loading: true });
 
     try {
       const response = await fetch(BACKEND_URL, {
@@ -148,27 +428,24 @@
 
       const pctSaved = Number(payload.pct_saved ?? 0);
       const recommendedModel = payload.recommended_model ?? payload.model_used ?? "unknown-model";
-      const modelUsed = payload.model_used ?? "unknown-model";
+      const targetTier = payload.target_tier || resolveTargetTier(payload.model_used || recommendedModel, prompt);
+      const exactModelLabel = getExactModelLabel(targetTier);
       const memoryContext = payload.memory_context ?? "";
-      const tier = payload.tier ?? "";
 
       await recordAnalytics(payload);
-      // Auto-click disabled: findModelSwitcher()'s selectors are matching
-      // the wrong menu item against Gemini's real DOM (dropdown shows "Pro"
-      // while the badge correctly reports a light-tier route), so a demo
-      // would show the two contradicting each other. Badge-only for now —
-      // it still tells the full routing/savings story without touching
-      // Gemini's UI. Re-enable once findModelSwitcher() is fixed.
-      // applyGeminiModelSelection(recommendedModel);
+      await selectGeminiModel(targetTier);
+
+      if (memoryContext) {
+        maybePrependMemoryContext(getPromptInput(), memoryContext, prompt);
+      }
+
+      triggerNativeSend();
 
       setBadgeState({
         metric: `${pctSaved.toFixed(1)}% saved`,
-        subtext: `Model: ${recommendedModel}${tier ? ` (${tier})` : ""}${memoryContext ? ` | Memory attached` : ""}`,
+        subtext: `Model: ${recommendedModel} -> ${exactModelLabel}${memoryContext ? " | Memory attached" : ""}`,
         loading: false
       });
-
-      const input = getPromptInput();
-      maybePrependMemoryContext(input, memoryContext, prompt);
     } catch (error) {
       if (requestId !== activeRequestId) {
         return;
@@ -188,33 +465,65 @@
     const actualCost = Number(payload.actual_cost ?? 0);
     const costSaved = Math.max(0, baselineCost - actualCost);
     const co2SavedG = Math.max(0, Number(payload.estimated_co2_saved_g ?? 0));
+    const tier = ["light", "mid", "heavy"].includes(payload.tier) ? payload.tier : "unknown";
+    const today = new Date();
+    const dateKey = [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, "0"),
+      String(today.getDate()).padStart(2, "0")
+    ].join("-");
 
     try {
       const stored = await chrome.storage.local.get(ANALYTICS_KEY);
       const current = stored[ANALYTICS_KEY] ?? {};
+      const currentDaily = current.daily && typeof current.daily === "object" ? current.daily : {};
+      const currentDay = currentDaily[dateKey] ?? {};
+      const currentDayTiers = currentDay.tierCounts ?? {};
+      const allTimeTiers = current.tierCounts ?? {};
+
+      const daily = {
+        ...currentDaily,
+        [dateKey]: {
+          prompts: Number(currentDay.prompts ?? 0) + 1,
+          inferenceCostSaved: Number(currentDay.inferenceCostSaved ?? 0) + costSaved,
+          estimatedCo2SavedG: Number(currentDay.estimatedCo2SavedG ?? 0) + co2SavedG,
+          tierCounts: {
+            ...currentDayTiers,
+            [tier]: Number(currentDayTiers[tier] ?? 0) + 1
+          }
+        }
+      };
+
+      const retentionDate = new Date(today);
+      retentionDate.setDate(retentionDate.getDate() - 400);
+      const retentionKey = [
+        retentionDate.getFullYear(),
+        String(retentionDate.getMonth() + 1).padStart(2, "0"),
+        String(retentionDate.getDate()).padStart(2, "0")
+      ].join("-");
+      Object.keys(daily).forEach((key) => {
+        if (key < retentionKey) {
+          delete daily[key];
+        }
+      });
+
       await chrome.storage.local.set({
         [ANALYTICS_KEY]: {
+          schemaVersion: 2,
           inferenceCostSaved: Number(current.inferenceCostSaved ?? 0) + costSaved,
           estimatedCo2SavedG: Number(current.estimatedCo2SavedG ?? 0) + co2SavedG,
           promptsOptimized: Number(current.promptsOptimized ?? 0) + 1,
-          lastUpdated: new Date().toISOString()
+          tierCounts: {
+            ...allTimeTiers,
+            [tier]: Number(allTimeTiers[tier] ?? 0) + 1
+          },
+          daily,
+          lastUpdated: today.toISOString()
         }
       });
     } catch (error) {
-      console.warn("EcoToken could not update local analytics.", error);
+      console.warn("[EcoToken] Could not update local analytics.", error);
     }
-  }
-
-  function isSendButton(element) {
-    if (!(element instanceof HTMLElement)) {
-      return false;
-    }
-
-    const ariaLabel = (element.getAttribute("aria-label") || "").toLowerCase();
-    const title = (element.getAttribute("title") || "").toLowerCase();
-    const tooltip = (element.getAttribute("data-tooltip") || "").toLowerCase();
-    const text = (element.textContent || "").toLowerCase();
-    return ariaLabel.includes("send") || title.includes("send") || tooltip.includes("send") || text === "send";
   }
 
   function bindInteractions() {
@@ -226,11 +535,7 @@
     input.dataset.everosBound = "true";
 
     input.addEventListener("keydown", (event) => {
-      if (!isEnabled) {
-        return;
-      }
-
-      if (event.key !== "Enter" || event.shiftKey || event.isComposing) {
+      if (!isEnabled || bypassInterception || submissionInFlight || event.key !== "Enter" || event.shiftKey || event.isComposing) {
         return;
       }
 
@@ -239,14 +544,24 @@
         return;
       }
 
+      event.preventDefault();
+      event.stopPropagation();
+      submissionInFlight = true;
       lastPrompt = prompt;
-      setTimeout(() => postPrompt(prompt), 0);
+
+      setTimeout(async () => {
+        try {
+          await postPrompt(prompt);
+        } finally {
+          submissionInFlight = false;
+        }
+      }, 0);
     });
 
     document.addEventListener(
       "click",
       (event) => {
-        if (!isEnabled) {
+        if (!isEnabled || bypassInterception || submissionInFlight) {
           return;
         }
 
@@ -265,8 +580,18 @@
           return;
         }
 
+        event.preventDefault();
+        event.stopPropagation();
+        submissionInFlight = true;
         lastPrompt = prompt;
-        setTimeout(() => postPrompt(prompt), 0);
+
+        setTimeout(async () => {
+          try {
+            await postPrompt(prompt);
+          } finally {
+            submissionInFlight = false;
+          }
+        }, 0);
       },
       true
     );
@@ -282,17 +607,21 @@
     link.rel = "stylesheet";
     link.href = chrome.runtime.getURL("overlay.css");
     link.dataset.everosOverlay = "true";
-    document.head.appendChild(link);
+    (document.head || document.documentElement).appendChild(link);
   }
 
   function boot() {
     if (!isEnabled) {
+      modelPickerObserver?.disconnect();
+      modelPickerObserver = null;
+      cachedModelPickerButton = null;
       document.getElementById(BADGE_ID)?.remove();
       return;
     }
 
     ensureBadge();
     injectStylesheet();
+    observeModelPicker();
     bindInteractions();
   }
 

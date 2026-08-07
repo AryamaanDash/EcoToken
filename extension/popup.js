@@ -21,11 +21,15 @@
   }
 
   function formatCost(value) {
+    if (value > 0 && value < 0.000001) {
+      return "<$0.000001";
+    }
+
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
-      minimumFractionDigits: 4,
-      maximumFractionDigits: 6
+      minimumFractionDigits: value < 0.01 ? 6 : 2,
+      maximumFractionDigits: value < 0.01 ? 6 : 4
     }).format(value);
   }
 
@@ -33,7 +37,10 @@
     if (grams >= 1000) {
       return `${(grams / 1000).toFixed(2)} kg`;
     }
-    return `${grams.toFixed(2)} g`;
+    if (grams > 0 && grams < 0.001) {
+      return "<0.001 g";
+    }
+    return `${grams < 1 ? grams.toFixed(3) : grams.toFixed(2)} g`;
   }
 
   function renderAnalytics(analytics = {}) {

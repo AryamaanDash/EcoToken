@@ -68,6 +68,11 @@
       "date": "2026-08-07",
       "decision": "Use a compact pale-aqua extension popup with a persistent top-level toggle, two all-time metric cards, and a high-contrast dashboard action.",
       "reason": "Extends the dashboard visual language into Chrome while keeping the primary controls immediately scannable."
+    },
+    {
+      "date": "2026-08-07",
+      "decision": "Replace illustrative dashboard figures with local measured routing counts and clearly separated modeled cost/carbon estimates, including 7-day, 30-day, and 365-day history views.",
+      "reason": "Prevents sample projections from being mistaken for telemetry while preserving useful impact trends."
     }
   ],
   "evidence": [],
