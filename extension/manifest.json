@@ -14,6 +14,7 @@
     }
   ],
   "action": {
-    "default_title": "EcoToken Gemini Overlay"
+    "default_title": "EcoToken Gemini Overlay",
+    "default_popup": "popup.html"
   }
 }

@@ -1,10 +1,13 @@
 (() => {
   const BACKEND_URL = "http://localhost:8000/api/optimize-gemini";
   const BADGE_ID = "everos-gemini-badge";
+  const ENABLED_KEY = "ecotokenEnabled";
+  const ANALYTICS_KEY = "ecotokenAnalytics";
   const PREPEND_MEMORY_CONTEXT = false;
 
   let lastPrompt = "";
   let activeRequestId = 0;
+  let isEnabled = false;
 
   function normalizeModelName(modelName) {
     return (modelName || "").toLowerCase().replace(/[^a-z0-9.-]/g, "");
@@ -49,6 +52,10 @@
   }
 
   function ensureBadge() {
+    if (!isEnabled) {
+      return null;
+    }
+
     let badge = document.getElementById(BADGE_ID);
     if (badge) {
       return badge;
@@ -67,6 +74,10 @@
 
   function setBadgeState({ metric, subtext, loading = false, error = false }) {
     const badge = ensureBadge();
+    if (!badge) {
+      return;
+    }
+
     badge.classList.toggle("everos-loading", loading);
     badge.classList.toggle("everos-error", error);
 
@@ -110,6 +121,10 @@
   }
 
   async function postPrompt(prompt) {
+    if (!isEnabled) {
+      return;
+    }
+
     const requestId = ++activeRequestId;
     setBadgeState({ metric: "Analyzing", subtext: "Sending prompt to local optimizer...", loading: true });
 
@@ -137,6 +152,7 @@
       const memoryContext = payload.memory_context ?? "";
       const tier = payload.tier ?? "";
 
+      await recordAnalytics(payload);
       // Auto-click disabled: findModelSwitcher()'s selectors are matching
       // the wrong menu item against Gemini's real DOM (dropdown shows "Pro"
       // while the badge correctly reports a light-tier route), so a demo
@@ -167,6 +183,28 @@
     }
   }
 
+  async function recordAnalytics(payload) {
+    const baselineCost = Number(payload.baseline_cost ?? 0);
+    const actualCost = Number(payload.actual_cost ?? 0);
+    const costSaved = Math.max(0, baselineCost - actualCost);
+    const co2SavedG = Math.max(0, Number(payload.estimated_co2_saved_g ?? 0));
+
+    try {
+      const stored = await chrome.storage.local.get(ANALYTICS_KEY);
+      const current = stored[ANALYTICS_KEY] ?? {};
+      await chrome.storage.local.set({
+        [ANALYTICS_KEY]: {
+          inferenceCostSaved: Number(current.inferenceCostSaved ?? 0) + costSaved,
+          estimatedCo2SavedG: Number(current.estimatedCo2SavedG ?? 0) + co2SavedG,
+          promptsOptimized: Number(current.promptsOptimized ?? 0) + 1,
+          lastUpdated: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      console.warn("EcoToken could not update local analytics.", error);
+    }
+  }
+
   function isSendButton(element) {
     if (!(element instanceof HTMLElement)) {
       return false;
@@ -188,6 +226,10 @@
     input.dataset.everosBound = "true";
 
     input.addEventListener("keydown", (event) => {
+      if (!isEnabled) {
+        return;
+      }
+
       if (event.key !== "Enter" || event.shiftKey || event.isComposing) {
         return;
       }
@@ -204,6 +246,10 @@
     document.addEventListener(
       "click",
       (event) => {
+        if (!isEnabled) {
+          return;
+        }
+
         const target = event.target;
         if (!(target instanceof HTMLElement)) {
           return;
@@ -240,6 +286,11 @@
   }
 
   function boot() {
+    if (!isEnabled) {
+      document.getElementById(BADGE_ID)?.remove();
+      return;
+    }
+
     ensureBadge();
     injectStylesheet();
     bindInteractions();
@@ -250,5 +301,21 @@
   });
 
   observer.observe(document.documentElement, { childList: true, subtree: true });
-  boot();
+
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== "local" || !changes[ENABLED_KEY]) {
+      return;
+    }
+
+    isEnabled = changes[ENABLED_KEY].newValue !== false;
+    if (!isEnabled) {
+      activeRequestId += 1;
+    }
+    boot();
+  });
+
+  chrome.storage.local.get(ENABLED_KEY).then((stored) => {
+    isEnabled = stored[ENABLED_KEY] !== false;
+    boot();
+  });
 })();
