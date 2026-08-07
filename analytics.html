@@ -166,6 +166,22 @@ document.getElementById("file").addEventListener("change", ev => {
 document.getElementById("demo").addEventListener("click", () => {
   render(DEMO); document.getElementById("status").textContent = "showing demo data";
 });
+
+async function loadFromServer() {
+  try {
+    const res = await fetch("requests_log.json", { cache: "no-store" });
+    if (!res.ok) return;
+    const log = await res.json();
+    render(log);
+    document.getElementById("status").textContent =
+      `live — updated ${new Date().toLocaleTimeString()}`;
+  } catch (e) {
+    // silently skip a failed poll, e.g. file mid-write
+  }
+}
+
+loadFromServer();                    // initial load
+setInterval(loadFromServer, 3000);   // re-poll every 3s
 </script>
 </body>
 </html>

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import json
 import math
 import os
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI
@@ -153,6 +155,22 @@ def log_to_snowflake(payload: dict[str, Any]) -> None:
         connection.close()
 
 
+# analytics.html (the root static dashboard) loads a JSON file shaped like
+# this via its file picker. The extension's own chrome.storage analytics
+# (recordAnalytics() in content.js) is separate and feeds the popup UI —
+# this is what lets requests_log.json be loaded into the standalone page too.
+LOCAL_LOG_PATH = Path(__file__).resolve().parent.parent / "requests_log.json"
+
+
+def append_local_log(entry: dict[str, Any]) -> None:
+    try:
+        existing = json.loads(LOCAL_LOG_PATH.read_text()) if LOCAL_LOG_PATH.exists() else []
+    except (json.JSONDecodeError, OSError):
+        existing = []
+    existing.append(entry)
+    LOCAL_LOG_PATH.write_text(json.dumps(existing, indent=2))
+
+
 @app.post("/api/optimize-gemini", response_model=OptimizeGeminiResponse)
 def optimize_gemini(request: OptimizeGeminiRequest) -> OptimizeGeminiResponse:
     memory_context = retrieve_memory_context(request.prompt)
@@ -177,6 +195,13 @@ def optimize_gemini(request: OptimizeGeminiRequest) -> OptimizeGeminiResponse:
         **cost_data,
     }
     log_to_snowflake(payload)
+    append_local_log({
+        "ts": int(datetime.now(timezone.utc).timestamp() * 1000),
+        "prompt": request.prompt,
+        "score": score,
+        "tier": tier,
+        "model": recommended_model,
+    })
 
     return OptimizeGeminiResponse(
         response=response_text,
