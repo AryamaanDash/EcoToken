@@ -1,15 +1,17 @@
 from __future__ import annotations
 
+import json
 import math
 import os
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Literal
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from model_routing import choose_gemini_model
+from model_routing import route_prompt
 
 try:
     import snowflake.connector
@@ -36,6 +38,8 @@ class OptimizeGeminiResponse(BaseModel):
     recommended_model: str
     model_used: str
     memory_context: str
+    tier: str
+    score: int
     pct_saved: float
     baseline_cost: float
     actual_cost: float
@@ -58,36 +62,34 @@ def retrieve_memory_context(prompt: str) -> str:
     return "\n".join(snippets)
 
 
-def classify_complexity(prompt: str) -> Literal["simple", "complex"]:
-    prompt_lower = prompt.lower()
-    words = len(prompt.split())
-    reasoning_signals = ["analyze", "compare", "derive", "design", "optimize", "architecture", "debug", "refactor", "tradeoff"]
-    has_reasoning_signal = any(signal in prompt_lower for signal in reasoning_signals)
-
-    if words > 80 or has_reasoning_signal:
-        return "complex"
-    return "simple"
-
-
 def estimate_tokens(text: str) -> int:
     return max(1, math.ceil(len(text.split()) * 1.35))
 
 
-def calculate_costs(prompt: str, memory_context: str, complexity: str, routed_model: str) -> dict[str, Any]:
-    baseline_model = "gemini-2.5-pro"
+# Placeholder per-token rates for the three tiers classifier.py/js route to.
+# Swap for real per-provider pricing before this leaves hackathon-land.
+MODEL_RATES = {
+    "gemini-3.5-flash-lite": 0.000002,
+    "gemini-3.6-flash": 0.000005,
+    "gemini-3.1-pro": 0.000015,
+}
+BASELINE_MODEL = "gemini-3.1-pro"  # what every prompt would cost if never routed down
+EXTRA_TOKENS_BY_TIER = {"light": 40, "mid": 80, "heavy": 140}
 
+
+def calculate_costs(
+    prompt: str,
+    memory_context: str,
+    tier: Literal["light", "mid", "heavy"],
+    routed_model: str,
+) -> dict[str, Any]:
     prompt_tokens = estimate_tokens(prompt)
     memory_tokens = estimate_tokens(memory_context)
     baseline_tokens = prompt_tokens + 250
-    actual_tokens = prompt_tokens + memory_tokens + (60 if complexity == "simple" else 120)
+    actual_tokens = prompt_tokens + memory_tokens + EXTRA_TOKENS_BY_TIER.get(tier, 80)
 
-    model_rates = {
-        "gemini-2.5-flash": 0.000005,
-        "gemini-2.5-pro": 0.000015,
-    }
-
-    baseline_rate = model_rates[baseline_model]
-    actual_rate = model_rates.get(routed_model, baseline_rate)
+    baseline_rate = MODEL_RATES[BASELINE_MODEL]
+    actual_rate = MODEL_RATES.get(routed_model, baseline_rate)
 
     baseline_cost = baseline_tokens * baseline_rate
     actual_cost = actual_tokens * actual_rate
@@ -142,9 +144,10 @@ def log_to_snowflake(payload: dict[str, Any]) -> None:
                     pct_saved,
                     baseline_cost,
                     actual_cost,
-                    complexity
+                    tier,
+                    score
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     datetime.now(timezone.utc),
@@ -154,7 +157,8 @@ def log_to_snowflake(payload: dict[str, Any]) -> None:
                     payload["pct_saved"],
                     payload["baseline_cost"],
                     payload["actual_cost"],
-                    payload["complexity"],
+                    payload["tier"],
+                    payload["score"],
                 ),
             )
         connection.commit()
@@ -164,31 +168,57 @@ def log_to_snowflake(payload: dict[str, Any]) -> None:
         connection.close()
 
 
+# analytics.html already knows how to load a JSON file shaped like this
+# (its file picker + "Load requests_log.json" button) — writing every live
+# request here is what turns the dashboard from demo data into real usage.
+LOCAL_LOG_PATH = Path(__file__).resolve().parent.parent / "requests_log.json"
+
+
+def append_local_log(entry: dict[str, Any]) -> None:
+    try:
+        existing = json.loads(LOCAL_LOG_PATH.read_text()) if LOCAL_LOG_PATH.exists() else []
+    except (json.JSONDecodeError, OSError):
+        existing = []
+    existing.append(entry)
+    LOCAL_LOG_PATH.write_text(json.dumps(existing, indent=2))
+
+
 @app.post("/api/optimize-gemini", response_model=OptimizeGeminiResponse)
 def optimize_gemini(request: OptimizeGeminiRequest) -> OptimizeGeminiResponse:
     memory_context = retrieve_memory_context(request.prompt)
-    complexity = classify_complexity(request.prompt)
-    recommended_model = choose_gemini_model(request.prompt, memory_context, complexity)
-    cost_data = calculate_costs(request.prompt, memory_context, complexity, recommended_model)
+    route_result = route_prompt(request.prompt)
+    tier = route_result["tier"]
+    recommended_model = route_result["model"]
+    cost_data = calculate_costs(request.prompt, memory_context, tier, recommended_model)
 
     response_text = (
-        f"Processed as {complexity} query with {recommended_model}. "
+        f"Processed as {route_result['label']} ({tier}) with {recommended_model}. "
         "This is a scaffold response from the local proxy."
     )
 
     payload = {
         "prompt": request.prompt,
         "memory_context": memory_context,
-        "complexity": complexity,
+        "tier": tier,
+        "score": route_result["score"],
         **cost_data,
     }
     log_to_snowflake(payload)
+    append_local_log({
+        "ts": int(datetime.now(timezone.utc).timestamp() * 1000),
+        "prompt": request.prompt,
+        "score": route_result["score"],
+        "tier": tier,
+        "model": recommended_model,
+    })
 
     return OptimizeGeminiResponse(
         response=response_text,
         recommended_model=recommended_model,
         model_used=cost_data["model_used"],
         memory_context=memory_context,
+        tier=tier,
+        score=route_result["score"],
         pct_saved=cost_data["pct_saved"],
         baseline_cost=cost_data["baseline_cost"],
         actual_cost=cost_data["actual_cost"],

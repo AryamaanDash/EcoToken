@@ -135,12 +135,19 @@
       const recommendedModel = payload.recommended_model ?? payload.model_used ?? "unknown-model";
       const modelUsed = payload.model_used ?? "unknown-model";
       const memoryContext = payload.memory_context ?? "";
+      const tier = payload.tier ?? "";
 
-      applyGeminiModelSelection(recommendedModel);
+      // Auto-click disabled: findModelSwitcher()'s selectors are matching
+      // the wrong menu item against Gemini's real DOM (dropdown shows "Pro"
+      // while the badge correctly reports a light-tier route), so a demo
+      // would show the two contradicting each other. Badge-only for now —
+      // it still tells the full routing/savings story without touching
+      // Gemini's UI. Re-enable once findModelSwitcher() is fixed.
+      // applyGeminiModelSelection(recommendedModel);
 
       setBadgeState({
         metric: `${pctSaved.toFixed(1)}% saved`,
-        subtext: `Model: ${recommendedModel}${memoryContext ? ` | Memory attached` : ""}`,
+        subtext: `Model: ${recommendedModel}${tier ? ` (${tier})` : ""}${memoryContext ? ` | Memory attached` : ""}`,
         loading: false
       });
 
