@@ -1,5 +1,6 @@
+.venv/
 __pycache__/
-*.pyc
+*.py[cod]
 requests_log.json
 node_modules/
 .DS_Store

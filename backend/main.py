@@ -41,6 +41,7 @@ class OptimizeGeminiResponse(BaseModel):
     pct_saved: float
     baseline_cost: float
     actual_cost: float
+    estimated_co2_saved_g: float
 
 
 # --- per-token rates. Baseline is always the top model. EDIT to real prices. -
@@ -84,11 +85,23 @@ def calculate_costs(prompt: str, memory_context: str, tier: str, routed_model: s
     actual_cost = actual_tokens * actual_rate
     pct_saved = 0.0 if baseline_cost <= 0 else max(0.0, min(100.0, ((baseline_cost - actual_cost) / baseline_cost) * 100.0))
 
+    # Illustrative inference-energy assumptions until measured model telemetry is available.
+    energy_wh_per_1k_tokens = {
+        "gemini-2.5-flash": 0.3,
+        "gemini-2.5-pro": 1.2,
+    }
+    grid_carbon_g_per_kwh = 400.0
+    baseline_energy_wh = (baseline_tokens / 1000) * energy_wh_per_1k_tokens[baseline_model]
+    actual_energy_wh = (actual_tokens / 1000) * energy_wh_per_1k_tokens.get(routed_model, energy_wh_per_1k_tokens[baseline_model])
+    energy_saved_wh = max(0.0, baseline_energy_wh - actual_energy_wh)
+    estimated_co2_saved_g = (energy_saved_wh / 1000) * grid_carbon_g_per_kwh
+
     return {
         "model_used": routed_model,
         "baseline_cost": round(baseline_cost, 6),
         "actual_cost": round(actual_cost, 6),
         "pct_saved": round(pct_saved, 2),
+        "estimated_co2_saved_g": round(estimated_co2_saved_g, 6),
     }
 
 
@@ -165,4 +178,5 @@ def optimize_gemini(request: OptimizeGeminiRequest) -> OptimizeGeminiResponse:
         pct_saved=cost_data["pct_saved"],
         baseline_cost=cost_data["baseline_cost"],
         actual_cost=cost_data["actual_cost"],
+        estimated_co2_saved_g=cost_data["estimated_co2_saved_g"],
     )

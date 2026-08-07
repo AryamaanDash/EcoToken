@@ -63,6 +63,11 @@
       "date": "2026-08-07",
       "decision": "Use a calm, sustainability-led analytics direction inspired by the reference: pale aqua header, spacious metric typography, subtle borders, and a cyan area chart.",
       "reason": "Keeps the dashboard modern and trustworthy while emphasizing the savings figures."
+    },
+    {
+      "date": "2026-08-07",
+      "decision": "Use a compact pale-aqua extension popup with a persistent top-level toggle, two all-time metric cards, and a high-contrast dashboard action.",
+      "reason": "Extends the dashboard visual language into Chrome while keeping the primary controls immediately scannable."
     }
   ],
   "evidence": [],
