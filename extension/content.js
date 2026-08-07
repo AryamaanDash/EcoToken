@@ -465,16 +465,60 @@
     const actualCost = Number(payload.actual_cost ?? 0);
     const costSaved = Math.max(0, baselineCost - actualCost);
     const co2SavedG = Math.max(0, Number(payload.estimated_co2_saved_g ?? 0));
+    const tier = ["light", "mid", "heavy"].includes(payload.tier) ? payload.tier : "unknown";
+    const today = new Date();
+    const dateKey = [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, "0"),
+      String(today.getDate()).padStart(2, "0")
+    ].join("-");
 
     try {
       const stored = await chrome.storage.local.get(ANALYTICS_KEY);
       const current = stored[ANALYTICS_KEY] ?? {};
+      const currentDaily = current.daily && typeof current.daily === "object" ? current.daily : {};
+      const currentDay = currentDaily[dateKey] ?? {};
+      const currentDayTiers = currentDay.tierCounts ?? {};
+      const allTimeTiers = current.tierCounts ?? {};
+
+      const daily = {
+        ...currentDaily,
+        [dateKey]: {
+          prompts: Number(currentDay.prompts ?? 0) + 1,
+          inferenceCostSaved: Number(currentDay.inferenceCostSaved ?? 0) + costSaved,
+          estimatedCo2SavedG: Number(currentDay.estimatedCo2SavedG ?? 0) + co2SavedG,
+          tierCounts: {
+            ...currentDayTiers,
+            [tier]: Number(currentDayTiers[tier] ?? 0) + 1
+          }
+        }
+      };
+
+      const retentionDate = new Date(today);
+      retentionDate.setDate(retentionDate.getDate() - 400);
+      const retentionKey = [
+        retentionDate.getFullYear(),
+        String(retentionDate.getMonth() + 1).padStart(2, "0"),
+        String(retentionDate.getDate()).padStart(2, "0")
+      ].join("-");
+      Object.keys(daily).forEach((key) => {
+        if (key < retentionKey) {
+          delete daily[key];
+        }
+      });
+
       await chrome.storage.local.set({
         [ANALYTICS_KEY]: {
+          schemaVersion: 2,
           inferenceCostSaved: Number(current.inferenceCostSaved ?? 0) + costSaved,
           estimatedCo2SavedG: Number(current.estimatedCo2SavedG ?? 0) + co2SavedG,
           promptsOptimized: Number(current.promptsOptimized ?? 0) + 1,
-          lastUpdated: new Date().toISOString()
+          tierCounts: {
+            ...allTimeTiers,
+            [tier]: Number(allTimeTiers[tier] ?? 0) + 1
+          },
+          daily,
+          lastUpdated: today.toISOString()
         }
       });
     } catch (error) {
