@@ -1,0 +1,570 @@
+[
+  {
+    "q": "define algorithm",
+    "tier": "light"
+  },
+  {
+    "q": "explain how to implement a Raft consensus algorithm and prove its safety guarantees",
+    "tier": "heavy"
+  },
+  {
+    "q": "write a two-sentence product tagline for a coffee shop",
+    "tier": "mid"
+  },
+  {
+    "q": "define inflation",
+    "tier": "light"
+  },
+  {
+    "q": "why is the sky blue?",
+    "tier": "mid"
+  },
+  {
+    "q": "convert 10 pounds to kilograms",
+    "tier": "light"
+  },
+  {
+    "q": "write a tweet announcing a new app launch",
+    "tier": "mid"
+  },
+  {
+    "q": "compare solar and wind energy",
+    "tier": "mid"
+  },
+  {
+    "q": "what are the tradeoffs of using a monolith vs microservices at a high level?",
+    "tier": "mid"
+  },
+  {
+    "q": "antonym for 'brave'",
+    "tier": "light"
+  },
+  {
+    "q": "explain a REST API with a simple example",
+    "tier": "mid"
+  },
+  {
+    "q": "how do I set up a virtual environment in Python?",
+    "tier": "mid"
+  },
+  {
+    "q": "what is the tallest mountain on Earth?",
+    "tier": "light"
+  },
+  {
+    "q": "write a haiku about the ocean",
+    "tier": "mid"
+  },
+  {
+    "q": "how do I sort a list of dictionaries by a key?",
+    "tier": "mid"
+  },
+  {
+    "q": "translate 'thank you' to French",
+    "tier": "light"
+  },
+  {
+    "q": "what time zone is New York in?",
+    "tier": "light"
+  },
+  {
+    "q": "design a distributed rate limiter for a kubernetes cluster handling 1M req/s and justify the tradeoffs",
+    "tier": "heavy"
+  },
+  {
+    "q": "what is the capital of Japan?",
+    "tier": "light"
+  },
+  {
+    "q": "explain how a compiler performs register allocation using graph coloring and the tradeoffs",
+    "tier": "heavy"
+  },
+  {
+    "q": "who is the author of Hamlet?",
+    "tier": "light"
+  },
+  {
+    "q": "who is the president of France?",
+    "tier": "light"
+  },
+  {
+    "q": "explain the difference between TCP and UDP with a simple example",
+    "tier": "mid"
+  },
+  {
+    "q": "design a recommendation system and evaluate collaborative vs content-based filtering",
+    "tier": "heavy"
+  },
+  {
+    "q": "analyze the legal implications of this indemnification clause and compare it to standard contract terms",
+    "tier": "heavy"
+  },
+  {
+    "q": "what is the capital of France?",
+    "tier": "light"
+  },
+  {
+    "q": "prove by induction that the sum of the first n integers is n(n+1)/2",
+    "tier": "heavy"
+  },
+  {
+    "q": "compare cats and dogs as pets",
+    "tier": "mid"
+  },
+  {
+    "q": "explain recursion with a simple example",
+    "tier": "mid"
+  },
+  {
+    "q": "write a short poem about autumn",
+    "tier": "mid"
+  },
+  {
+    "q": "what is the chemical symbol for gold?",
+    "tier": "light"
+  },
+  {
+    "q": "what are the pros and cons of remote work?",
+    "tier": "mid"
+  },
+  {
+    "q": "simplify the fraction 12/18 and explain",
+    "tier": "mid"
+  },
+  {
+    "q": "define velocity",
+    "tier": "light"
+  },
+  {
+    "q": "what is the capital of Egypt?",
+    "tier": "light"
+  },
+  {
+    "q": "why do we have seasons?",
+    "tier": "mid"
+  },
+  {
+    "q": "debug this: function f(){ for(let i=0;i<n;i++){ return i } } why does it only return once and how do I fix it?",
+    "tier": "heavy"
+  },
+  {
+    "q": "what is 15% of 240 and how do you get it?",
+    "tier": "mid"
+  },
+  {
+    "q": "if a train goes 60 mph for 3 hours, how far does it travel?",
+    "tier": "mid"
+  },
+  {
+    "q": "synonym for 'happy'",
+    "tier": "light"
+  },
+  {
+    "q": "convert 10 feet to meters",
+    "tier": "light"
+  },
+  {
+    "q": "derive the backpropagation equations for a two-layer neural network and explain each term",
+    "tier": "heavy"
+  },
+  {
+    "q": "what's 12 times 8?",
+    "tier": "light"
+  },
+  {
+    "q": "why do leaves change color in fall?",
+    "tier": "mid"
+  },
+  {
+    "q": "explain why this recursive function causes a stack overflow and rewrite it iteratively",
+    "tier": "heavy"
+  },
+  {
+    "q": "how many days are in a leap year?",
+    "tier": "light"
+  },
+  {
+    "q": "explain how vaccines work with a simple example",
+    "tier": "mid"
+  },
+  {
+    "q": "define democracy",
+    "tier": "light"
+  },
+  {
+    "q": "explain supply and demand with a simple example",
+    "tier": "mid"
+  },
+  {
+    "q": "who is the founder of Tesla?",
+    "tier": "light"
+  },
+  {
+    "q": "compare renting and buying a home",
+    "tier": "mid"
+  },
+  {
+    "q": "what is the capital of Canada?",
+    "tier": "light"
+  },
+  {
+    "q": "what is the largest ocean?",
+    "tier": "light"
+  },
+  {
+    "q": "what is the capital of Brazil?",
+    "tier": "light"
+  },
+  {
+    "q": "name a fruit that is red",
+    "tier": "light"
+  },
+  {
+    "q": "why does ice float on water?",
+    "tier": "mid"
+  },
+  {
+    "q": "rewrite this to be more formal: hey can u send the doc",
+    "tier": "mid"
+  },
+  {
+    "q": "define entropy",
+    "tier": "light"
+  },
+  {
+    "q": "how many sides does a hexagon have?",
+    "tier": "light"
+  },
+  {
+    "q": "how do I connect to a database in Node?",
+    "tier": "mid"
+  },
+  {
+    "q": "how does a for loop work?",
+    "tier": "mid"
+  },
+  {
+    "q": "who is the CEO of Apple?",
+    "tier": "light"
+  },
+  {
+    "q": "how do I make an HTTP request in JavaScript?",
+    "tier": "mid"
+  },
+  {
+    "q": "this async function returns undefined instead of the fetched data \u2014 explain the bug and fix the promise handling",
+    "tier": "heavy"
+  },
+  {
+    "q": "who is the current UN Secretary-General?",
+    "tier": "light"
+  },
+  {
+    "q": "abbreviation for Massachusetts",
+    "tier": "light"
+  },
+  {
+    "q": "what is the speed of light?",
+    "tier": "light"
+  },
+  {
+    "q": "explain how gradient descent can fail on non-convex loss surfaces and strategies to mitigate it",
+    "tier": "heavy"
+  },
+  {
+    "q": "explain object-oriented programming with a simple example",
+    "tier": "mid"
+  },
+  {
+    "q": "compare React and Vue",
+    "tier": "mid"
+  },
+  {
+    "q": "what is the capital of Spain?",
+    "tier": "light"
+  },
+  {
+    "q": "evaluate the tax implications of exercising ISOs vs NSOs and explain the AMT impact",
+    "tier": "heavy"
+  },
+  {
+    "q": "give me a 5-step plan to learn guitar",
+    "tier": "mid"
+  },
+  {
+    "q": "convert 10 ounces to grams",
+    "tier": "light"
+  },
+  {
+    "q": "analyze the concurrency model of Go's goroutines vs OS threads and when each is appropriate",
+    "tier": "heavy"
+  },
+  {
+    "q": "what language is spoken in Brazil?",
+    "tier": "light"
+  },
+  {
+    "q": "what does 'CPU' stand for?",
+    "tier": "light"
+  },
+  {
+    "q": "summarize the plot of Romeo and Juliet in two sentences",
+    "tier": "mid"
+  },
+  {
+    "q": "list the primary colors",
+    "tier": "light"
+  },
+  {
+    "q": "how many planets are in the solar system?",
+    "tier": "light"
+  },
+  {
+    "q": "prove that a binary search runs in O(log n) time",
+    "tier": "heavy"
+  },
+  {
+    "q": "explain how a hash table works with a simple example",
+    "tier": "mid"
+  },
+  {
+    "q": "explain the water cycle with a simple example",
+    "tier": "mid"
+  },
+  {
+    "q": "convert 10 miles to kilometers",
+    "tier": "light"
+  },
+  {
+    "q": "compare iOS and Android",
+    "tier": "mid"
+  },
+  {
+    "q": "design a caching strategy for a read-heavy API and explain cache invalidation",
+    "tier": "heavy"
+  },
+  {
+    "q": "prove that the square root of 2 is irrational",
+    "tier": "heavy"
+  },
+  {
+    "q": "what is the capital of India?",
+    "tier": "light"
+  },
+  {
+    "q": "solve the differential equation dy/dx = xy with y(0)=1 and explain each step",
+    "tier": "heavy"
+  },
+  {
+    "q": "derive the Black-Scholes option pricing formula assumptions and explain each variable",
+    "tier": "heavy"
+  },
+  {
+    "q": "what is the currency of Japan?",
+    "tier": "light"
+  },
+  {
+    "q": "explain the clinical differences between type 1 and type 2 diabetes management and the mechanisms involved",
+    "tier": "heavy"
+  },
+  {
+    "q": "how do I center a div in CSS?",
+    "tier": "mid"
+  },
+  {
+    "q": "why does bread rise?",
+    "tier": "mid"
+  },
+  {
+    "q": "architect a fault-tolerant event-driven system and evaluate Kafka vs RabbitMQ",
+    "tier": "heavy"
+  },
+  {
+    "q": "what is the capital of Nepal?",
+    "tier": "light"
+  },
+  {
+    "q": "define tariff",
+    "tier": "light"
+  },
+  {
+    "q": "how do I read a CSV file in pandas?",
+    "tier": "mid"
+  },
+  {
+    "q": "optimize this SQL query that joins five tables, explain why it's slow, then rewrite it",
+    "tier": "heavy"
+  },
+  {
+    "q": "what is the boiling point of water?",
+    "tier": "light"
+  },
+  {
+    "q": "design a URL shortener that scales to a billion links and analyze the storage tradeoffs",
+    "tier": "heavy"
+  },
+  {
+    "q": "prove that there are infinitely many prime numbers",
+    "tier": "heavy"
+  },
+  {
+    "q": "explain the greenhouse effect with a simple example",
+    "tier": "mid"
+  },
+  {
+    "q": "analyze how quantum entanglement enables quantum key distribution and its security guarantees",
+    "tier": "heavy"
+  },
+  {
+    "q": "hi",
+    "tier": "light"
+  },
+  {
+    "q": "what year did World War 2 end?",
+    "tier": "light"
+  },
+  {
+    "q": "refactor this concurrency code to avoid the race condition and explain why the deadlock happens",
+    "tier": "heavy"
+  },
+  {
+    "q": "explain the difference between HTTP and HTTPS with a simple example",
+    "tier": "mid"
+  },
+  {
+    "q": "what is the capital of Kenya?",
+    "tier": "light"
+  },
+  {
+    "q": "prove that the halting problem is undecidable using a diagonalization argument",
+    "tier": "heavy"
+  },
+  {
+    "q": "what is the capital of Norway?",
+    "tier": "light"
+  },
+  {
+    "q": "spell 'accommodate'",
+    "tier": "light"
+  },
+  {
+    "q": "architect a real-time chat backend supporting 100k concurrent users and discuss consistency",
+    "tier": "heavy"
+  },
+  {
+    "q": "compare Python and JavaScript",
+    "tier": "mid"
+  },
+  {
+    "q": "derive the quadratic formula by completing the square and explain each step",
+    "tier": "heavy"
+  },
+  {
+    "q": "compare SQL and NoSQL",
+    "tier": "mid"
+  },
+  {
+    "q": "design a payment processing pipeline that is idempotent and explain how you prevent double charges",
+    "tier": "heavy"
+  },
+  {
+    "q": "compare coffee and tea",
+    "tier": "mid"
+  },
+  {
+    "q": "convert 10 Fahrenheit to Celsius",
+    "tier": "light"
+  },
+  {
+    "q": "define photosynthesis",
+    "tier": "light"
+  },
+  {
+    "q": "explain how git branching works with a simple example",
+    "tier": "mid"
+  },
+  {
+    "q": "solve for x: 2x + 5 = 15 and show the step",
+    "tier": "mid"
+  },
+  {
+    "q": "what is the capital of Peru?",
+    "tier": "light"
+  },
+  {
+    "q": "my kubernetes pod keeps crashing with OOMKilled \u2014 walk through how to diagnose and fix it",
+    "tier": "heavy"
+  },
+  {
+    "q": "explain how DNS resolves a domain with a simple example",
+    "tier": "mid"
+  },
+  {
+    "q": "what is the capital of Chile?",
+    "tier": "light"
+  },
+  {
+    "q": "convert 10 gallons to liters",
+    "tier": "light"
+  },
+  {
+    "q": "define gravity",
+    "tier": "light"
+  },
+  {
+    "q": "calculate the area of a circle with radius 4",
+    "tier": "mid"
+  },
+  {
+    "q": "design a database schema for a multi-tenant SaaS with row-level security and explain your choices",
+    "tier": "heavy"
+  },
+  {
+    "q": "define metaphor",
+    "tier": "light"
+  },
+  {
+    "q": "what is the capital of Italy?",
+    "tier": "light"
+  },
+  {
+    "q": "hello there",
+    "tier": "light"
+  },
+  {
+    "q": "diagnose why this distributed system loses messages under network partition and design a fix",
+    "tier": "heavy"
+  },
+  {
+    "q": "define osmosis",
+    "tier": "light"
+  },
+  {
+    "q": "draft a friendly reminder email about a meeting",
+    "tier": "mid"
+  },
+  {
+    "q": "define ecosystem",
+    "tier": "light"
+  },
+  {
+    "q": "define mitosis",
+    "tier": "light"
+  },
+  {
+    "q": "what is the capital of Ghana?",
+    "tier": "light"
+  },
+  {
+    "q": "why is the ocean salty?",
+    "tier": "mid"
+  },
+  {
+    "q": "how many continents are there?",
+    "tier": "light"
+  },
+  {
+    "q": "how do I reverse a string in Python?",
+    "tier": "mid"
+  }
+]

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Model Router — Savings Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:#0d1117; --card:#161b22; --border:#26303d; --text:#e6edf3; --muted:#8b949e;
+    --light:#3fb950; --mid:#d29922; --heavy:#f85149; --accent:#58a6ff;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:var(--bg); color:var(--text); padding:32px; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  .sub { color:var(--muted); font-size:14px; margin-bottom:24px; }
+  .row { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:16px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px; }
+  .kpi { flex:1; min-width:160px; }
+  .kpi .label { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+  .kpi .value { font-size:30px; font-weight:650; margin-top:6px; }
+  .kpi .value.save { color:var(--light); }
+  .grow { flex:1; min-width:300px; }
+  canvas { max-height:260px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th,td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--border); }
+  th { color:var(--muted); font-weight:500; }
+  .pill { padding:2px 8px; border-radius:20px; font-size:11px; font-weight:600; }
+  .pill.light { background:rgba(63,185,80,.15); color:var(--light); }
+  .pill.mid { background:rgba(210,153,34,.15); color:var(--mid); }
+  .pill.heavy { background:rgba(248,81,73,.15); color:var(--heavy); }
+  .bar { display:flex; height:14px; border-radius:7px; overflow:hidden; margin-top:10px; }
+  .toolbar { display:flex; gap:10px; align-items:center; margin-bottom:20px; flex-wrap:wrap; }
+  button, label.file { background:var(--card); border:1px solid var(--border); color:var(--text);
+    padding:8px 14px; border-radius:8px; font-size:13px; cursor:pointer; }
+  button:hover, label.file:hover { border-color:var(--accent); }
+  input[type=file] { display:none; }
+  .prompt { max-width:520px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .empty { color:var(--muted); padding:40px; text-align:center; }
+</style>
+</head>
+<body>
+  <h1>AI Model Router — Savings Dashboard</h1>
+  <div class="sub">Routing questions to the cheapest capable Gemini model. Prices are editable placeholders.</div>
+
+  <div class="toolbar">
+    <label class="file">Load requests_log.json<input type="file" id="file" accept=".json" /></label>
+    <button id="demo">Load demo data</button>
+    <span id="status" style="color:var(--muted);font-size:13px;"></span>
+  </div>
+
+  <div class="row">
+    <div class="card kpi"><div class="label">Total requests</div><div class="value" id="kpiTotal">0</div></div>
+    <div class="card kpi"><div class="label">Actual cost</div><div class="value" id="kpiCost">$0</div></div>
+    <div class="card kpi"><div class="label">Cost if all Pro</div><div class="value" id="kpiAll">$0</div></div>
+    <div class="card kpi"><div class="label">Saved</div><div class="value save" id="kpiSaved">0%</div></div>
+  </div>
+
+  <div class="row">
+    <div class="card grow">
+      <div class="label" style="color:var(--muted);font-size:12px;text-transform:uppercase;">Requests by tier</div>
+      <div class="bar" id="bar"></div>
+      <canvas id="pie" style="margin-top:16px;"></canvas>
+    </div>
+    <div class="card grow">
+      <div class="label" style="color:var(--muted);font-size:12px;text-transform:uppercase;">Cost: routed vs. all-Pro</div>
+      <canvas id="costChart"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="label" style="color:var(--muted);font-size:12px;text-transform:uppercase;margin-bottom:10px;">Recent requests</div>
+    <div id="tableWrap"><div class="empty">Load a log file or click “Load demo data”.</div></div>
+  </div>
+
+<script>
+// ---- config: keep in sync with logger.py / logger.js ----
+const PRICE_PER_1K = { light: 0.10, mid: 0.30, heavy: 2.50 };
+const COLORS = { light: "#3fb950", mid: "#d29922", heavy: "#f85149" };
+
+let pieChart, costChart;
+
+const DEMO = [
+  {ts:Date.now()-9000,prompt:"capital of France?",score:2,tier:"light",model:"gemini-3.5-flash-lite"},
+  {ts:Date.now()-8000,prompt:"define osmosis",score:0,tier:"light",model:"gemini-3.5-flash-lite"},
+  {ts:Date.now()-7000,prompt:"who is the CEO of Apple?",score:0,tier:"light",model:"gemini-3.5-flash-lite"},
+  {ts:Date.now()-6000,prompt:"How do I center a div in CSS?",score:17,tier:"mid",model:"gemini-3.6-flash"},
+  {ts:Date.now()-5000,prompt:"Explain how attention works and compare to RNNs",score:46,tier:"mid",model:"gemini-3.6-flash"},
+  {ts:Date.now()-4000,prompt:"Summarize the plot of Hamlet",score:32,tier:"mid",model:"gemini-3.6-flash"},
+  {ts:Date.now()-3000,prompt:"Design a distributed rate limiter for a kubernetes cluster and prove consistency",score:72,tier:"heavy",model:"gemini-3.1-pro"},
+  {ts:Date.now()-2000,prompt:"Derive the backpropagation equations for a two-layer net",score:70,tier:"heavy",model:"gemini-3.1-pro"},
+];
+
+function render(log) {
+  const counts = { light:0, mid:0, heavy:0 };
+  for (const e of log) counts[e.tier]++;
+  const n = log.length;
+  const routed = (counts.light*PRICE_PER_1K.light + counts.mid*PRICE_PER_1K.mid + counts.heavy*PRICE_PER_1K.heavy)/1000;
+  const allHeavy = n*PRICE_PER_1K.heavy/1000;
+  const saved = allHeavy ? (allHeavy-routed)/allHeavy*100 : 0;
+
+  document.getElementById("kpiTotal").textContent = n;
+  document.getElementById("kpiCost").textContent = "$"+routed.toFixed(4);
+  document.getElementById("kpiAll").textContent = "$"+allHeavy.toFixed(4);
+  document.getElementById("kpiSaved").textContent = saved.toFixed(1)+"%";
+
+  // stacked bar
+  const bar = document.getElementById("bar"); bar.innerHTML = "";
+  for (const t of ["light","mid","heavy"]) {
+    if (!counts[t]) continue;
+    const seg = document.createElement("div");
+    seg.style.width = (counts[t]/n*100)+"%";
+    seg.style.background = COLORS[t];
+    seg.title = `${t}: ${counts[t]}`;
+    bar.appendChild(seg);
+  }
+
+  // pie
+  pieChart?.destroy();
+  pieChart = new Chart(document.getElementById("pie"), {
+    type:"doughnut",
+    data:{ labels:["light","mid","heavy"],
+      datasets:[{ data:[counts.light,counts.mid,counts.heavy],
+        backgroundColor:[COLORS.light,COLORS.mid,COLORS.heavy], borderWidth:0 }]},
+    options:{ plugins:{ legend:{ labels:{ color:"#e6edf3" }, position:"bottom" }}}
+  });
+
+  // cost bars
+  costChart?.destroy();
+  costChart = new Chart(document.getElementById("costChart"), {
+    type:"bar",
+    data:{ labels:["Routed","All Pro"],
+      datasets:[{ data:[routed, allHeavy], backgroundColor:["#58a6ff","#f85149"], borderRadius:6 }]},
+    options:{ plugins:{ legend:{ display:false }},
+      scales:{ x:{ ticks:{ color:"#8b949e" }, grid:{ display:false }},
+        y:{ ticks:{ color:"#8b949e" }, grid:{ color:"#26303d" }}}}
+  });
+
+  // table (most recent first)
+  const rows = [...log].reverse().slice(0,50).map(e => `
+    <tr>
+      <td>${new Date(e.ts).toLocaleTimeString()}</td>
+      <td class="prompt">${escapeHtml(e.prompt)}</td>
+      <td>${e.score}</td>
+      <td><span class="pill ${e.tier}">${e.tier}</span></td>
+      <td style="color:var(--muted)">${e.model}</td>
+    </tr>`).join("");
+  document.getElementById("tableWrap").innerHTML = n ? `
+    <table><thead><tr><th>Time</th><th>Prompt</th><th>Score</th><th>Tier</th><th>Model</th></tr></thead>
+    <tbody>${rows}</tbody></table>` : `<div class="empty">No requests in this log.</div>`;
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+document.getElementById("file").addEventListener("change", ev => {
+  const f = ev.target.files[0]; if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try { render(JSON.parse(reader.result));
+      document.getElementById("status").textContent = `loaded ${f.name}`; }
+    catch(e){ document.getElementById("status").textContent = "invalid JSON"; }
+  };
+  reader.readAsText(f);
+});
+document.getElementById("demo").addEventListener("click", () => {
+  render(DEMO); document.getElementById("status").textContent = "showing demo data";
+});
+</script>
+</body>
+</html>
