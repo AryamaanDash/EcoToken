@@ -1,11 +1,10 @@
 """
 EcoToken model routing — tuned rule-based complexity classifier.
 Scores a prompt 0-100 and routes to one of three Gemini tiers.
-~97% on the 142-prompt test set. Pure heuristics, no ML, no network call.
+~96% on the 807-prompt test set. Pure heuristics, no ML, no network call.
 
-Backend entry point:
     from model_routing import route
-    r = route(prompt)      # {"score": 72, "tier": "heavy", "model": "gemini-3.1-pro"}
+    r = route(prompt)   # {"score": 72, "tier": "heavy", "model": "gemini-3.1-pro", "features": {...}}
 """
 from __future__ import annotations
 import re, math
@@ -19,34 +18,34 @@ MODEL_MAP = {
     "mid":   "gemini-3.6-flash",
     "heavy": "gemini-3.1-pro",
 }
-# score thresholds
-LIGHT_MAX, MID_MAX = 13, 48
+LIGHT_MAX, MID_MAX = 13, 48   # score thresholds
 
 # ------------------------------ signals ------------------------------------
 REASONING_WORDS = ["why","how","explain","analyze","analyse","compare","contrast","evaluate","assess","justify","prove","derive","design","architect","optimize","optimise","refactor","debug","troubleshoot","diagnose","trade-off","tradeoff","implications","strategy","reason","cause","critique","synthesize","synthesise","implement","algorithm","calculate","compute"]
-SIMPLE_WORDS = ["define","definition","what is","what's","who is","who's","when is","where is","capital of","translate","spell","meaning of","convert","how many","how much","list ","name a","abbreviation","synonym","antonym","yes or no"]
-HARD_DOMAINS = ["legal","lawsuit","contract","regulation","medical","diagnosis","clinical","quantum","cryptograph","differential equation","tensor","distributed system","concurrency","kubernetes","compiler","machine learning","neural network","financial model","tax","actuarial","microservice","event-driven","kafka","rabbitmq","consensus","raft","multi-tenant","database schema","row-level","backpropagation","undecidable","halting problem","race condition","deadlock","fault-tolerant","theorem","diagonalization"]
-TASK_WORDS = ["write","rewrite","draft","compose","generate","summarize","summarise","plan","outline","rephrase","paraphrase","brainstorm","make a","build a","give me a"]
-CODE_KEYWORDS = ["function","class ","def ","async","await","const ","for (","while (","=>","null","undefined","stack trace","exception","error:","npm ","){","();"]
-WEAK_CODE = ["python","javascript","typescript","java","c++","rust","sql","regex","api","return","git "]
-HEAVY_WORDS = ["prove","proof","derive","theorem","irrational","by induction","big o","o(log","o(n","o(1)","np-hard","np-complete","asymptotic","idempotent","black-scholes","option pricing","quadratic formula"]
+SIMPLE_WORDS = ["define","definition","what is","what's","who is","who's","when is","where is","capital of","translate","spell","meaning of","convert","how many","how much","list ","name a","abbreviation","synonym","antonym","yes or no","how do you say","how do i say","what currency","what continent","is ","population of"]
+HARD_DOMAINS = ["legal","lawsuit","contract","regulation","medical","diagnosis","clinical","quantum","cryptograph","differential equation","tensor","distributed system","concurrency","kubernetes","compiler","machine learning","neural network","financial model","tax","actuarial","microservice","event-driven","kafka","rabbitmq","consensus","raft","multi-tenant","database schema","row-level","backpropagation","undecidable","halting problem","race condition","deadlock","fault-tolerant","theorem","diagonalization","tls","oauth","cap theorem","replica","failover","load balancer","sharding"]
+TASK_WORDS = ["write","rewrite","draft","compose","generate","summarize","summarise","plan","outline","rephrase","paraphrase","brainstorm","make a","build a","give me a","recommend","suggest","tips for","tips to"]
+CODE_KEYWORDS = ["function","def ","async","await","const ","for (","while (","=>","null","undefined","stack trace","exception","error:","npm ","){","();"]
+WEAK_CODE = ["python","javascript","typescript","java","c++","rust","sql","regex","api","return","git ","class "]
+HEAVY_WORDS = ["prove","proof","derive","theorem","irrational","by induction","big o","o(log","o(n","o(1)","np-hard","np-complete","asymptotic","idempotent","black-scholes","option pricing","quadratic formula","root cause","amortized","recurrence","complexity of","closed form","worst case"]
 DESIGN_WORDS = ["design","architect","build a","implement"]
-SYSTEM_WORDS = ["system","pipeline","backend","schema","service","scalable","scales","architecture","infrastructure","distributed","real-time","concurrent","recommendation","shortener","rate limiter","microservice","chat backend"]
+SYSTEM_WORDS = ["system","pipeline","backend","schema","service","scalable","scales","architecture","infrastructure","distributed","real-time","concurrent","recommendation","shortener","rate limiter","microservice","chat backend","replica","failover","throughput","latency","load balanc","consistency","partition","stream processing","key-value","crawler","matching engine","scoreboard","leaderboard"]
 
-W = {"lpw":0.7,"lcap":28,"rw":11,"rcap":33,"q":7,"qcap":21,"code":26,"math":14,"dom":27,"ms":12,"task":13,"con":5,"ccap":15,"hw":16,"hcap":40,"ds":24,"pc":12,"combo":9,"sw":-14,"scap":-28,"short":-12}
+W = {"lpw":0.7,"lcap":28,"rw":11,"rcap":33,"q":7,"qcap":21,"code":26,"math":14,"dom":27,"ms":12,"task":13,
+     "con":5,"ccap":15,"hw":16,"hcap":40,"ds":26,"pc":12,"combo":9,"sw":-14,"scap":-28,"short":-12,
+     "tradeoff":22,"diagfix":16}
 
 def _c(t, ns): return sum(1 for w in ns if w in t)
 def _cl(v, lo, hi): return max(lo, min(hi, v))
 
 def score_prompt(prompt: str) -> tuple[int, dict]:
-    """Return (0-100 score, feature breakdown)."""
     raw = str(prompt); text = raw.lower()
     wc = len([w for w in text.split() if w])
     feats = {}; score = 0.0
     def add(k, v, p):
         nonlocal score; feats[k] = {"value": v, "points": round(p, 1)}; score += p
 
-    lookup = bool(re.search(r"how many|how much", text))
+    lookup = bool(re.search(r"how many|how much|how do you say|how do i say", text))
     rh = _c(text, REASONING_WORDS)
     if lookup: rh = max(0, rh - 1)
 
@@ -64,6 +63,8 @@ def score_prompt(prompt: str) -> tuple[int, dict]:
     hw = _c(text, HEAVY_WORDS); add("heavy_words", hw, _cl(hw*W["hw"], 0, W["hcap"]))
     ds = _c(text, DESIGN_WORDS) > 0 and _c(text, SYSTEM_WORDS) > 0; add("design_system", ds, W["ds"] if ds else 0)
     pc = bool(re.search(r"pros and cons|advantages and disadvantages", text)); add("pros_cons", pc, W["pc"] if pc else 0)
+    tr = bool(re.search(r"tradeoff|trade-off", text)) and bool(re.search(r"analyze|analyse|evaluate|vs |versus", text)); add("tradeoff_analysis", tr, W["tradeoff"] if tr else 0)
+    df = bool(re.search(r"root cause|analyze the root|diagnose.*(fix|cause)|(fix|cause).*diagnose", text)); add("diagnose_fix", df, W["diagfix"] if df else 0)
     if rh == 0 or lookup:
         sh = _c(text, SIMPLE_WORDS); add("simple_words", sh, _cl(sh*W["sw"], W["scap"], 0))
     st = 0 < wc <= 4 and rh == 0; add("short_prompt", st, W["short"] if st else 0)
@@ -77,12 +78,10 @@ def score_to_tier(score: int) -> Tier:
     return "heavy"
 
 def route(prompt: str) -> dict:
-    """Main entry: prompt -> {score, tier, model, features}."""
     score, feats = score_prompt(prompt)
     tier = score_to_tier(score)
     return {"score": score, "tier": tier, "model": MODEL_MAP[tier], "features": feats}
 
-
-# --- backward-compatible shim so existing main.py imports keep working ------
+# backward-compatible shim
 def choose_gemini_model(prompt: str, memory_context: str = "", complexity=None) -> str:
     return route(prompt)["model"]
