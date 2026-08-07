@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "EcoToken Gemini Overlay",
+  "version": "0.1.0",
+  "description": "Smart Gemini overlay that estimates token and cost savings through a local optimization proxy.",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": ["https://gemini.google.com/*", "http://localhost:8000/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://gemini.google.com/*"],
+      "js": ["content.js"],
+      "css": ["overlay.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "EcoToken Gemini Overlay"
+  }
+}

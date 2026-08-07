@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "project": {
+    "name": "EcoToken",
+    "productType": "Chrome extension analytics dashboard",
+    "stack": ["HTML", "CSS", "JavaScript"]
+  },
+  "sources": {
+    "tokens": [],
+    "components": [],
+    "assets": [],
+    "instructions": []
+  },
+  "design": {
+    "colorMode": "light",
+    "colors": {
+      "ink": "#173f3a",
+      "canvas": "#fbfdfc",
+      "wash": "#eaf8f4",
+      "accent": "#08a88a",
+      "chart": "#08aec1"
+    },
+    "typography": {
+      "family": "system sans-serif",
+      "character": "calm, precise, numeric-first"
+    },
+    "spacing": {
+      "pageWidth": "1180px",
+      "rhythm": "generous"
+    },
+    "radius": {
+      "card": "24px",
+      "control": "10px"
+    },
+    "shadows": {
+      "card": "soft green-tinted elevation"
+    },
+    "motion": {
+      "character": "restrained",
+      "reducedMotion": true
+    },
+    "density": "comfortable"
+  },
+  "components": {
+    "installed": [],
+    "preferredPrimitives": [],
+    "patterns": []
+  },
+  "constraints": {
+    "must": [
+      "Run entirely from local extension assets",
+      "Label example analytics as illustrative",
+      "Remain usable on mobile and desktop"
+    ],
+    "avoid": [
+      "Remote dependencies",
+      "Decorative gradients",
+      "Excessive card fragmentation"
+    ]
+  },
+  "decisions": [
+    {
+      "date": "2026-08-07",
+      "decision": "Use a calm, sustainability-led analytics direction inspired by the reference: pale aqua header, spacious metric typography, subtle borders, and a cyan area chart.",
+      "reason": "Keeps the dashboard modern and trustworthy while emphasizing the savings figures."
+    }
+  ],
+  "evidence": [],
+  "generatedAt": "2026-08-07T19:04:17.787Z"
+}
